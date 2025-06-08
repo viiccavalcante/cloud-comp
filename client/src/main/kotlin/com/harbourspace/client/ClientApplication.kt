@@ -1,11 +1,11 @@
-package com.harbourspace.cloudcomputing25
+package com.harbourspace.client
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
 @SpringBootApplication
-class Cloudcomputing25Application
+class ClientApplication
 
 fun main(args: Array<String>) {
-	runApplication<Cloudcomputing25Application>(*args)
+    runApplication<ClientApplication>(*args)
 }

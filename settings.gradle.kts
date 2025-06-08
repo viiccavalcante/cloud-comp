@@ -1,1 +1,4 @@
-rootProject.name = "cloudcomputing25"
+rootProject.name = "shiftbooking"
+
+include("shiftbooking-server")
+include("client")

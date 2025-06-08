@@ -8,22 +8,19 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 class ShiftController(val repository: ShiftRepository) {
 
-    @PostMapping("/shifts")
-    fun modifyShifts(@RequestBody shifts: ShiftsVm): String {
-        shifts.shifts.forEach(
-            { shiftVm ->
-                val shift = Shift(
-                    companyId = shiftVm.companyId,
-                    userId = shiftVm.userId,
-                    startTime = shiftVm.startTime,
-                    endTime = shiftVm.endTime
-                )
-                when (shiftVm.action) {
-                    "add" -> repository.save(shift)
-                    "delete" -> repository.deleteById(shift.id)
-                }
-            }
+    @PostMapping("/shift")
+    fun modifyShifts(@RequestBody shiftVm: ShiftVm): String {
+
+        val shift = Shift(
+            companyId = shiftVm.companyId,
+            userId = shiftVm.userId,
+            startTime = shiftVm.startTime,
+            endTime = shiftVm.endTime
         )
+        when (shiftVm.action) {
+            "add" -> repository.save(shift)
+        }
+
         return "{status: 'ok'}"
     }
 
@@ -41,10 +38,6 @@ class ShiftController(val repository: ShiftRepository) {
         return ShiftsViewVm(shifts)
     }
 }
-
-class ShiftsVm(
-    val shifts: List<ShiftVm>
-)
 
 class ShiftsViewVm(
     val shifts: List<ShiftViewVm>

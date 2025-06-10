@@ -28,7 +28,6 @@ class ShiftController(val repository: ShiftRepository) {
 
     @GetMapping("/shifts")
     fun getShifts(): ShiftsViewVm {
-        Thread.sleep(2000)
         val shifts = repository.findAll().map { shift ->
             ShiftViewVm(
                 shiftId = shift.id,

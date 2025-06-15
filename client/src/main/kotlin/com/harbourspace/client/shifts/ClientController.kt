@@ -5,6 +5,8 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.reactive.function.client.WebClient
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import reactor.util.retry.Retry
 import java.time.Duration
 
@@ -28,30 +30,37 @@ class ClientController(val httpClient: WebClient) {
 
     @PostMapping("/clientshifts")
     fun modifyShifts(@RequestBody shiftsVm: ClientShiftsVm): String {
+        val batchSize = 5
 
-        shiftsVm.shifts.forEach { shift ->
-            val shiftVm = ClientShiftVm(
-                companyId = shift.companyId,
-                userId = shift.userId,
-                startTime = shift.startTime,
-                endTime = shift.endTime,
-                action = shift.action,
-            )
-            httpClient.post()
-                .uri("/shifts")
-                .bodyValue(shiftVm)
-                .retrieve()
-                .bodyToMono(String::class.java)
-                .retryWhen(
-                    Retry.backoff(3, Duration.ofSeconds(1))
-                        .maxBackoff(Duration.ofSeconds(10))
-                )
-                .block(Duration.ofSeconds(1))
+        shiftsVm.shifts.chunked(batchSize).forEach { batch ->
+            Flux.fromIterable(batch)
+                .flatMap({ shift -> persistShift(shift) }, 5)
+                .collectList()
+                .block()
         }
 
         return "{status: 'ok'}"
     }
 
+    fun persistShift(shift: ClientShiftVm): Mono<String> {
+        return httpClient.post()
+            .uri("/shift")
+            .bodyValue(shift)
+            .retrieve()
+            .onStatus({ it.is5xxServerError }) { response ->
+                response.bodyToMono(String::class.java)
+                    .flatMap { Mono.error(RuntimeException("HTTP 5xx: $it")) }
+            }
+            .bodyToMono(String::class.java)
+            .timeout(Duration.ofSeconds(60))
+            .retryWhen(
+                Retry.backoff(4, Duration.ofSeconds(4))
+                    .maxBackoff(Duration.ofSeconds(15))
+            )
+            .doOnError { e ->
+                println("Error with shift of user ${shift.userId}: ${e.message}")
+            }
+    }
 }
 
 class ClientShiftsVm(

@@ -7,11 +7,6 @@ import java.time.LocalDateTime
 @Table("requests")
 data class ShiftRequest(
     @Id val id: Int? = null,
-    val requestId: Int,
-    val companyId: String,
-    val userId: String,
-    val startTime: LocalDateTime,
-    val endTime: LocalDateTime,
-    val activity: String? = null,
+    val status: String,
     val createdAt: LocalDateTime = LocalDateTime.now()
 )

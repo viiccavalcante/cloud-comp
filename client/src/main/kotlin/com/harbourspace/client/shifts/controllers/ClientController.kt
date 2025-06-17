@@ -1,18 +1,23 @@
 package com.harbourspace.client.shifts.controllers
 
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RestController
+import com.harbourspace.client.services.*
+import com.harbourspace.client.shifts.models.*
+import com.harbourspace.client.shifts.repositories.*
+import com.harbourspace.client.dtos.*
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.*
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.util.retry.Retry
 import java.time.Duration
 
-@RestController
-class ClientController(val httpClient: WebClient) {
 
+@RestController
+class ClientController(
+    val httpClient: WebClient, val shiftRequestRepository: ShiftRequestRepository,
+    val shiftRepository: ShiftRepository, val persistShiftsService: PersistShiftsService
+) {
 
     @GetMapping("/clientshifts")
     fun getShifts(): ClientShiftsVm? {
@@ -34,7 +39,7 @@ class ClientController(val httpClient: WebClient) {
 
         shiftsVm.shifts.chunked(batchSize).forEach { batch ->
             Flux.fromIterable(batch)
-                .flatMap({ shift -> persistShift(shift) }, 5)
+                .flatMap({ shift -> persistShiftsService.persistShift(shift) }, 5)
                 .collectList()
                 .block()
         }
@@ -42,35 +47,36 @@ class ClientController(val httpClient: WebClient) {
         return "{status: 'ok'}"
     }
 
-    fun persistShift(shift: ClientShiftVm): Mono<String> {
-        return httpClient.post()
-            .uri("/shift")
-            .bodyValue(shift)
-            .retrieve()
-            .onStatus({ it.is5xxServerError }) { response ->
-                response.bodyToMono(String::class.java)
-                    .flatMap { Mono.error(RuntimeException("HTTP 5xx: $it")) }
-            }
-            .bodyToMono(String::class.java)
-            .timeout(Duration.ofSeconds(60))
-            .retryWhen(
-                Retry.backoff(4, Duration.ofSeconds(4))
-                    .maxBackoff(Duration.ofSeconds(15))
-            )
-            .doOnError { e ->
-                println("Error with shift of user ${shift.userId}: ${e.message}")
-            }
+    @GetMapping("/clientshifts/request/{id}")
+    fun getShiftRequestStatus(@PathVariable id: Int): Mono<ResponseEntity<Map<String, String>>> {
+        return shiftRequestRepository.findById(id).map { request ->
+
+            ResponseEntity.ok(mapOf("status" to request.status))
+
+        }.switchIfEmpty(Mono.just(ResponseEntity.notFound().build()))
     }
+
+    @PostMapping("/clientshiftsV2")
+    fun submitShifts(@RequestBody shiftsVm: ClientShiftsVm): Mono<Map<String, Any>> {
+        val shiftRequest = ShiftRequest(status = "pending")
+
+        return shiftRequestRepository.save(shiftRequest).flatMap { savedRequest ->
+            val shifts = shiftsVm.shifts.map { shiftVm ->
+                Shift(
+                    requestId = savedRequest.id!!,
+                    userId = shiftVm.userId,
+                    companyId = shiftVm.companyId,
+                    startTime = shiftVm.startTime,
+                    endTime = shiftVm.endTime,
+                    activity = shiftVm.action,
+                )
+            }
+
+            shiftRepository.saveAll(shifts).collectList().doOnNext {
+                persistShiftsService.persistShiftsAsync(savedRequest.id!!)
+            }.thenReturn(mapOf("requestId" to savedRequest.id!!))
+        }
+    }
+
+
 }
-
-class ClientShiftsVm(
-    val shifts: List<ClientShiftVm>
-)
-
-class ClientShiftVm(
-    val companyId: String,
-    val userId: String,
-    val startTime: String,
-    val endTime: String,
-    val action: String
-)

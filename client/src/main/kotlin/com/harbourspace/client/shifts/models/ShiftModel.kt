@@ -12,6 +12,6 @@ data class Shift(
     val userId: String,
     val startTime: LocalDateTime,
     val endTime: LocalDateTime,
-    val activity: String? = null,
+    val activity: String? = "add",
     val createdAt: LocalDateTime = LocalDateTime.now()
 )

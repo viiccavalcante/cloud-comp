@@ -9,6 +9,6 @@ class WebClientConfig {
     @Bean
     fun externalApiClient(builder: WebClient.Builder): WebClient =
         builder
-            .baseUrl("http://localhost:8080")
+            .baseUrl("http://localhost:8181")
             .build()
 }

@@ -1,4 +1,4 @@
-package com.harbourspace.client.shifts
+package com.harbourspace.client.shifts.controllers
 
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping

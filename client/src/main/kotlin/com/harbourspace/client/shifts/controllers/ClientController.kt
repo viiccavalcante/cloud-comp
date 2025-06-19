@@ -73,11 +73,13 @@ class ClientController(
                 )
             }
 
-            shardedShiftRepository.saveAll(shifts).collectList().doOnNext {
-                persistShiftsService.persistShiftsAsync(savedRequest.id!!)
-            }.thenReturn(mapOf("requestId" to savedRequest.id!!))
+            shardedShiftRepository.saveAll(shifts).collectList().flatMap {
+                Mono.fromRunnable<Unit> {
+                    persistShiftsService.persistShiftsAsync(savedRequest.id!!)
+                }.thenReturn(mapOf("requestId" to savedRequest.id!!))
+            }
+
         }
     }
-
 
 }

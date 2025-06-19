@@ -16,7 +16,8 @@ import java.time.Duration
 @RestController
 class ClientController(
     val httpClient: WebClient, val shiftRequestRepository: ShiftRequestRepository,
-    val shiftRepository: ShiftRepository, val persistShiftsService: PersistShiftsService
+    val persistShiftsService: PersistShiftsService,
+    val shardedShiftRepository: ShardedShiftRepository
 ) {
 
     @GetMapping("/clientshifts")
@@ -72,11 +73,13 @@ class ClientController(
                 )
             }
 
-            shiftRepository.saveAll(shifts).collectList().doOnNext {
-                persistShiftsService.persistShiftsAsync(savedRequest.id!!)
-            }.thenReturn(mapOf("requestId" to savedRequest.id!!))
+            shardedShiftRepository.saveAll(shifts).collectList().flatMap {
+                Mono.fromRunnable<Unit> {
+                    persistShiftsService.persistShiftsAsync(savedRequest.id!!)
+                }.thenReturn(mapOf("requestId" to savedRequest.id!!))
+            }
+
         }
     }
-
 
 }

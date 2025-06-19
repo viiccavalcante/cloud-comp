@@ -1,6 +1,5 @@
 package com.harbourspace.client.services
 
-import com.harbourspace.client.shifts.models.Shift
 import com.harbourspace.client.shifts.repositories.*
 import com.harbourspace.client.dtos.*
 import org.springframework.stereotype.Service
@@ -11,13 +10,13 @@ import java.time.Duration
 
 @Service
 class PersistShiftsService(
-    private val shiftRepository: ShiftRepository,
     private val shiftRequestRepository: ShiftRequestRepository,
+    private val shardedShiftRepository: ShardedShiftRepository,
     val httpClient: WebClient
 ) {
 
     fun persistShiftsAsync(requestId: Int) {
-        shiftRepository.findAllByRequestId(requestId).flatMap({ shift ->
+        shardedShiftRepository.findAllByRequestId(requestId).flatMap({ shift ->
             val vm = ClientShiftVm(
                 companyId = shift.companyId,
                 userId = shift.userId,

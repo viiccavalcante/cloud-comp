@@ -11,7 +11,7 @@ import reactor.util.retry.Retry
 import java.time.Duration
 
 @RestController
-class ClientController(val httpClient: WebClient) {
+class ClientController(val httpClient: WebClient, val sqsPublisher: SqsPublisher) {
 
 
     @GetMapping("/clientshifts")
@@ -57,6 +57,10 @@ class ClientController(val httpClient: WebClient) {
                 Retry.backoff(4, Duration.ofSeconds(4))
                     .maxBackoff(Duration.ofSeconds(15))
             )
+            .doOnSuccess {
+                println("Shift created, sending to SQS:")
+                sqsPublisher.sendSqsMessage(shift.userId ?: "N/A")
+            }
             .doOnError { e ->
                 println("Error with shift of user ${shift.userId}: ${e.message}")
             }

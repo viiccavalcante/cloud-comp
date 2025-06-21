@@ -14,7 +14,7 @@ yum update -y
 amazon-linux-extras enable corretto17
 yum install -y java-17-amazon-corretto git
 cd /home/ec2-user
-git clone --branch hw2 https://github.com/viiccavalcante/cloud-comp.git
+git clone --branch hw4 https://github.com/viiccavalcante/cloud-comp.git
 cd cloud-comp
 java -jar client/build/libs/client-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
 `;
@@ -27,7 +27,7 @@ const params = {
   MinCount: 1,
   MaxCount: 1,
   KeyName: "my-key",
-  SecurityGroupIds: ["sg-094024a92161d00b6"],
+  SecurityGroupIds: ["sg-05ea5b67c0079a52a"],
   UserData: encodedUserData,
   TagSpecifications: [
     {
